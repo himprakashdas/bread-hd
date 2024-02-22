@@ -113,6 +113,20 @@ class ModelCANet(nn.Module):
 
 def train(opt):
     if torch.cuda.is_available():
+
+        ## GPU DEBUG THINGY
+        print(">>PRINTING CUDA DEVICES<<")
+        device_count = torch.cuda.device_count()
+        print("Number of CUDA devices:", device_count)
+        for i in range(device_count):
+            device_name = torch.cuda.get_device_name(i)
+            print(f"Device {i}: {device_name}")
+
+
+
+        device = 'cuda:1' ### GPU Switch THINGY
+        ## ----------------
+        
         torch.cuda.manual_seed(42)
     else:
         torch.manual_seed(42)
@@ -149,7 +163,7 @@ def train(opt):
     writer = SingleSummaryWriter(opt.log_path + f'/{datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}/')
 
     if opt.num_gpus > 0:
-        model = model.cuda()
+        model = model.cuda(device=device)
         if opt.num_gpus > 1:
             model = nn.DataParallel(model)
 
@@ -180,7 +194,7 @@ def train(opt):
                         continue
                     try:
                         if opt.num_gpus == 1:
-                            data, target = data.cuda(), target.cuda()
+                            data, target = data.cuda(device=device), target.cuda(device=device)
                         optimizer.zero_grad()
 
                         image_out, color_loss1, color_loss2, \
@@ -226,8 +240,8 @@ def train(opt):
                 for iter, (data, target, name) in enumerate(val_generator):
                     with torch.no_grad():
                         if opt.num_gpus == 1:
-                            data = data.squeeze(0).cuda()
-                            target = target.cuda()
+                            data = data.squeeze(0).cuda(device=device)
+                            target = target.cuda(device=device)
 
                         image_out, color_loss1, color_loss2, restor_loss, \
                         psnr, ssim = model(data, target, training=False)
